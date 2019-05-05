@@ -49,7 +49,7 @@ AS
 OBJECT
 (
   COD_FILME INTEGER,
-  TITULO varchar2(50) not null,
+  TITULO varchar2(50),
   GENERO varchar2(50),
   DIRETOR varchar2(50),
   DESCRICAO varchar2(50),
@@ -62,8 +62,7 @@ OBJECT
 --------------------------------------------------------------------------------
 CREATE TABLE TB_FILME OF TP_FILME
 (
-  COD_FILME PRIMARY KEY,
-  ATORES
+  COD_FILME PRIMARY KEY
 )NESTED TABLE ATORES STORE AS TB_LISTA_ATORES;
 --------------------------------------------------------------------------------
 CREATE OR REPLACE TYPE TP_TELEFONE
@@ -92,16 +91,14 @@ AS
     CONSTRUCTOR FUNCTION TP_ENDERECO(X TP_ENDERECO) RETURN SELF AS RESULT
   )NOT FINAL;
 --------------------------------------------------------------------------------
-CREATE TABLE TB_ENDERECO OF TP ENDERECO;
---------------------------------------------------------------------------------
 CREATE OR REPLACE TYPE TP_FUNCIONARIO AS OBJECT
   (
     NOME VARCHAR2(100),
     CPF VARCHAR2(11),
     EMAIL VARCHAR2(50),
     TELEFONE TP_TELEFONE_FUNCIONARIO,
-    ENDERECO REF TP_ENDERECO,
-
+    ENDERECO TP_ENDERECO,
+    SUPERVISOR REF TP_FUNCIONARIO,
     CONSTRUCTOR FUNCTION TP_FUNCIONARIO RETURN SELF AS RESULT,
 
     ORDER MEMBER FUNCTION COMPARE(FUNCIONARIO TP_FUNCIONARIO) RETURN INTEGER,
@@ -132,25 +129,28 @@ CREATE OR REPLACE TYPE TP_FUNCIONARIO AS OBJECT
 --------------------------------------------------------------------------------
 CREATE OR REPLACE TYPE TP_NT_PRODUCTO AS TABLE OF TP_PRODUCTO;
 --------------------------------------------------------------------------------
-CREATE OR REPLACE TYPE TP_LANCHANETTE UNDER TP_FUNCIONARIO();
---------------------------------------------------------------------------------
-CREATE TABLE TB_LANCHANETTE OF TP_LANCHANETTE
-(
-  CPF PRIMARY KEY
-);
+CREATE OR REPLACE TYPE TP_LANCHONETE UNDER TP_FUNCIONARIO();
 --------------------------------------------------------------------------------
 CREATE OR REPLACE TYPE TP_LIMPEZA UNDER TP_FUNCIONARIO();
 --------------------------------------------------------------------------------
-CREATE TABLE TB_LIMPEZA
+CREATE TABLE TB_LIMPEZA OF TP_LIMPEZA
 (
-  CPF PRIMARY KEY
+  CPF PRIMARY KEY,
+  SUPERVISOR WITH ROWID REFERENCES TB_TICKET
 );
 --------------------------------------------------------------------------------
 CREATE OR REPLACE TYPE TP_TICKET UNDER TP_FUNCIONARIO();
 --------------------------------------------------------------------------------
-CREATE TABLE TB_TICKET
+CREATE TABLE TB_TICKET OF TP_TICKET
 (
-  CPF PRIMARY KEY
+  CPF PRIMARY KEY,
+  SUPERVISOR WITH ROWID REFERENCES TB_TICKET
+);
+--------------------------------------------------------------------------------
+CREATE TABLE TB_LANCHONETE OF TP_LANCHONETE
+(
+  CPF PRIMARY KEY,
+  SUPERVISOR WITH ROWID REFERENCES TB_TICKET
 );
 --------------------------------------------------------------------------------
 CREATE TABLE TB_VENDA(
@@ -167,9 +167,6 @@ OBJECT
 (
   NUMERO INTEGER,
   CAPACIDADE INTEGER,
-  TIPO_TELA varchar2(20),
-  TIPO_SOM varchar2(20),
-  TIPO_IMAGEM varchar2(20),
   CONSTRUCTOR FUNCTION TP_SALA(X TP_SALA) RETURN SELF AS RESULT,
   FINAL MEMBER FUNCTION COMPARE_NUMERO_SALA RETURN INTEGER
 );
@@ -179,7 +176,7 @@ CREATE TABLE TB_SALA OF TP_SALA
   NUMERO PRIMARY KEY
 );
 --------------------------------------------------------------------------------
-CREATE TABLE TB_LILMPEZA_SALA
+CREATE TABLE TB_LIMPEZA_SALA
 (
   SALA REF TP_SALA,
   LIMPEZA REF TP_LIMPEZA
@@ -191,20 +188,15 @@ OBJECT
 (
   COD_SESSAO integer,
   DATA_HORA_INICIO date,
+  FILME REF TP_FILME,
+  SALA REF TP_SALA,
   CONSTRUCTOR FUNCTION TP_SESSAO(X TP_SESSAO) RETURN SELF AS RESULT,
   MEMBER FUNCTION COMPARE_COD_SESSAO RETURN INTEGER
 );
 --------------------------------------------------------------------------------
-CREATE TABLE TB_SESSAO
+CREATE TABLE TB_SESSAO OF TP_SESSAO
 (
   COD_SESSAO PRIMARY KEY
-);
---------------------------------------------------------------------------------
-CREATE TABLE TB_SESSAO_FILME_SALA
-(
-  SESSAO REF TP_SESSAO,
-  FILME REF TP_FILME,
-  SALA REF TP_SALA
 );
 --------------------------------------------------------------------------------
 CREATE OR REPLACE TYPE TP_INGRESSO
@@ -221,8 +213,10 @@ OBJECT
   CONSTRUCTOR FUNCTION TP_INGRESSO(X TP_INGRESSO) RETURN SELF AS RESULT,
   MEMBER FUNCTION COMPARE_COD_INGRESSO RETURN INTEGER
 );
+
+ALTER TYPE TP_INGRESSO ADD ATTRIBUTE (SESSAO REF TP_SESSAO) CASCADE;
 --------------------------------------------------------------------------------
-CREATE TABLE TB_INGRESSO
+CREATE TABLE TB_INGRESSO OF TP_INGRESSO
 (
   COD_INGRESSO PRIMARY KEY
 );
